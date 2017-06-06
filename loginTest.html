@@ -5,37 +5,69 @@
     <title></title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
-    <script src="jquery.md5.min.js"></script>
+    <style>
+        body {
+
+            font-size: 14px;
+        }
+
+        #label {
+
+            text-align: center;
+            display: block;
+            color: #c00;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <script src="md5.min.js"></script>
     <script>
         $(function () {
-            function getRandom(l) {
-                var result = "";
-                var template = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-                for (i = 0; i < l; i++) {
-                    result += template.substr(Math.random() * template.length, 1);
+            $("#loginBtn").click(function (e) {
+                if (!/^1\d{10,10}$/.test($("#userid").val())) {
+                    $("#label").text("请输入正确的手机号");
+                    $("#userid").focus();
+                    return false;
                 }
-                return result;
-            }
-            function token(uid, pwd) {
-                var timeS =  (new Date()).valueOf();  //getRandom(6);
-                var tokenStr = uid + ":" + pwd;
-                tokenStr = $.md5(tokenStr,"@1120");
-                var sign = $.md5(tokenStr + "&" + timeS,"@1120",false,true);
+                if (!/^.{6,}$/.test($("#pwd").val())) {
+                    $("#label").text("登陆密码至少6位");
+                    $("#pwd").focus();
+                    return false;
+                }
 
-                $("#label").text("?token=" + tokenStr + "&t=" + timeS + "&sign=" + sign);
+                var Timestamp = (new Date()).valueOf();
+                var tokenStr = md5($("#userid").val() + ":" + $("#pwd").val());
+                var sign = md5("token=" + tokenStr + "&t=" + Timestamp).substr(8, 16);
 
-            }
+                $("#label").text("正在提交数据...");
 
-            $("#label").text("init");
-            token("luck", "als123123");
+                $.ajax({
+                    url: "usersService.ashx",
+                    type: "post",
+                    data: "token=" + tokenStr + "&t=" + Timestamp + "&sign=" + sign,
+                    success: function (data) {
+                        $("#label").text(data);
+
+                    },
+                });
+                /*
+               签名规则：
+                   签名应用串：token=[md5结果]&t=[时间戳]
+                   签名方法：MD5(16位)
+               
+               服务器端验证：
+                   1.验证时间戳有效期60秒，失败，返回超时Message
+                   2.验证签名Md5（16位），失败，返回签名失败Message
+                   3.验证token字段，通过，拉取user信息，失败返回登陆错误message
+               */
+            });
         });
     </script>
-
 </head>
 
 <body>
-    <span id="label"></span>
+    <span id="label"></span><br/> 登陆名：
+    <input type="text" id="userid" /><br/> 密 码：<input type="password" id="pwd" /><br/>
+    <input type="button" id="loginBtn" value="登陆" />
 </body>
 
 </html>
